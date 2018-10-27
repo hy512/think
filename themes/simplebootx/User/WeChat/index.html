@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>下单</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+        crossorigin="anonymous">
+    <style>
+
+        .x-form-group {
+            display: flex;
+            margin: 15px 0;
+        }
+        .x-form-group-row {
+            flex-direction: row;
+            align-items: center;
+        }
+        .x-form-group-col {
+            flex-direction: column;
+            
+        }
+        .x-form-group > input {
+            flex: 1;
+        }
+        .x-form-group > label {
+            margin-right: 15px;
+        }
+        .x-form-group > label::after {
+            content: ":";
+        }
+        .x-form-group > textarea {
+            height: 64px;
+        }
+        form {
+            max-width: 580px;
+            width: 100%;
+        }
+        .hints-red {
+            color: #de3333;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container" class="container">
+        <form @submit="submit" @reset="reset" method="POST" action="checkout">
+            <div class="inputs">
+                <form-group v-for="i in inputs" :key="i.id" :type="i.type" :textarea="i.textarea" :id="i.id" :name="i.name"
+                    :label="i.label" v-model:value.trim="i.value" :classes="i.classes" />
+            </div>
+            <div class="form-group x-form-group x-form-group-row">
+                <label>结束日期</label>
+                <input class="js-date" type="text" id="input-birthday" placeholder="2013-01-04" name="birthday">
+            </div>
+            <div>
+                <div v-for="i in hints" class="hints-red" v-show="hints.length > 0">*{{i}}</div>
+
+            </div>
+            <div style="color: #33de33" v-show="info.length > 0">*{{info}}</div>
+
+            <div class="form-group" style="display: flex; flex-direction: row; justify-content: center;margin-top: 25px;">
+                <input type="reset" value="重置" class="btn" />
+                <span style="width: 80px;"></span>
+                <input type="submit" value="提交" class="btn btn-info " />
+            </div>
+        </form>
+    </div>
+
+    <script src="__PUBLIC__/js/common.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.5.17/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        Vue.component("FormGroup", {
+            props: ["id", "type", "label", "name", "textarea", "value", "classes"],
+            data: function () {
+                return {
+                    hints: ""
+                };
+            },
+            beforeMount: function () {
+                this.hints = "请在此输入" + this.label + ".";
+            },
+            template: `<div :class="['form-group', 'x-form-group', this.textarea? 'x-form-group-col': 'x-form-group-row']">
+                <label :for="id">{{label}}</label>
+                <input v-if="!textarea" :class="classes"  :value="value" @input="$emit('input', $event.target.value)" :name="name" :id="id" v-bind:placeholder="hints" :type="type"/>
+                <textarea v-else @input="$emit('input', $event.target.value)" :value="value" :name="name" v-bind:placeholder="hints" :id="id" ></textarea>
+            </div>`
+        });
+        new Vue({
+            el: "#container",
+            data: {
+                inputs: [
+                    { label: "活动名称", name: "name", id: "name", value: "" },
+                    { label: "下单地址", name: "tpurl", id: "tpurl", value: "" },
+                    { label: "下单数量", name: "num", id: "num", value: "" },
+                    { label: "结束时间", name: "overtime", id: "overtime", value: "", classes: "js-datetime" },
+                    { label: "简介", name: "jianjie", id: "jianjie", textarea: true, value: "" }
+                ],
+                hints: [],
+                info: ""
+            },
+            methods: {
+                submit: function (e) {
+                    var data = this.inputs.reduce(function (a, b) {
+                        a[b.name] = b.value;
+                        return a;
+                    }, {});
+
+                    this.hints = [];
+                    // if (!(data.num == Number.parseInt(data.num) && data.num > 0)) {
+                    //     this.hints.push("请输入大于 0 的整数票数 !");
+                    // }
+                    // if (!/^http/.test(data.tpurl)) {
+                    //     this.hints.push("请输入合法的地址(url) !");
+
+                    // }
+                    // if (!data.name) {
+                    //     this.hints.push("活动名称不能为空 !");
+                    // }
+
+                    if (!this.hints.length) {
+                        var that = this;
+                        $.post("checkout", $("form").serialize(), function (data, status) {
+                            try {
+                                var result;
+                                if (typeof data === "string")
+                                    result = JSON.parse(data);
+                                else
+                                    result = data;
+                                if (result.status == 1) {
+                                    that.info = result.message;
+                                } else {
+                                    that.hints = result.messages;
+                                }
+                            } catch (e) {
+                                console.error(e);
+                            }
+                        });
+                    }
+                    e.preventDefault();
+                },
+                reset: function (e) {
+                    this.inputs.forEach(function (i) {
+                        i.value = "";
+                    });
+                    this.inputs = ([]).concat(this.inputs);
+                    this.hints = [];
+                    this.info = "";
+                    e.preventDefault();
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
